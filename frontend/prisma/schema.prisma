@@ -1,0 +1,45 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Vault {
+  id                 String   @id @default(uuid())
+  name               String
+  symbol             String
+  address            String   @unique
+  reserveVault       String
+  riskEngine         String
+  liquidationManager String
+  owner              String
+  asset              String
+  assetSymbol        String   @default("RLUSD")
+  initialDeposit     String
+  network            String   @default("XRPL EVM Sidechain Testnet")
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  loans              Loan[]
+
+  @@index([owner])
+}
+
+model Loan {
+  id                String   @id @default(uuid())
+  borrower          String
+  vaultAddress      String
+  amountRLUSD       String
+  collateralToken   String
+  collateralAmount  String
+  txHash            String
+  status            String   @default("ACTIVE")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  vault             Vault    @relation(fields: [vaultAddress], references: [address])
+
+  @@index([borrower])
+  @@index([vaultAddress])
+}

@@ -1,0 +1,48 @@
+{
+  "name": "xrpl-smart-lending",
+  "version": "1.0.0",
+  "description": "AI-Managed Lending Platform on XRPL EVM Sidechain with native XRP Ledger multi-collateral bridging",
+  "main": "index.js",
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "test:contracts": "hardhat test test/LendingVault.test.ts test/RiskEngine.test.ts test/Liquidation.test.ts test/NativeCollateralBridge.test.ts test/FiatOnRampGateway.test.ts",
+    "test:scenarios": "hardhat test test/Scenarios.test.ts",
+    "test:agent-proposals": "hardhat test test/AgentProposals.test.ts",
+    "test:mastercard": "hardhat test test/FiatOnRampGateway.test.ts",
+    "test:all": "hardhat test",
+    "agent:start": "ts-node agent/src/agent.ts",
+    "deploy:local": "hardhat run scripts/deploy.ts --network localhost",
+    "deploy:testnet": "hardhat run scripts/deploy.ts --network xrplEvmTestnet",
+    "bridge": "node --no-warnings --experimental-require-module ./bridge-tool/bridge.js",
+    "bridge:balances": "node --no-warnings --experimental-require-module ./bridge-tool/check-balances.js",
+    "frontend:dev": "npm --prefix frontend run dev",
+    "frontend:build": "npm --prefix frontend run build",
+    "frontend:start": "npm --prefix frontend run start"
+  },
+  "keywords": [
+    "xrpl",
+    "evm",
+    "defi",
+    "lending",
+    "ai-agent",
+    "gemini",
+    "mastercard-ap4m"
+  ],
+  "author": "Jimmy Debe",
+  "license": "CC0-1.0",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "@openzeppelin/contracts": "^5.0.2",
+    "@types/node": "^22.8.1",
+    "dotenv": "^16.4.5",
+    "hardhat": "^2.22.15",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.6.3"
+  },
+  "dependencies": {
+    "@google/genai": "^0.2.0",
+    "axios": "^1.7.7",
+    "xrpl": "^4.0.0"
+  }
+}

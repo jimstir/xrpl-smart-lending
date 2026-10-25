@@ -1,0 +1,18 @@
+[
+  {
+    "id": "vault-canonical-1",
+    "name": "AI-Managed RLUSD Vault",
+    "symbol": "amRLUSD",
+    "address": "0x610178dA211FEF7D417bC0e6FeD39F05609AD788",
+    "reserveVault": "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9",
+    "riskEngine": "0x8A791620dd6260079BF849Dc5567aDC3F2FdC318",
+    "liquidationManager": "0xB7f8BC63BbcaD18155201308C8f3540b07f84F5e",
+    "owner": "0xb1041133942d2E95e81B69acA3e7252C40d784B2",
+    "asset": "0x27b57a9D0b8d24EB97259c4E2279e45255e016f3",
+    "assetSymbol": "RLUSD",
+    "initialDeposit": "10000",
+    "network": "XRPL EVM Sidechain Testnet",
+    "createdAt": "2026-10-25T09:38:18.747Z",
+    "updatedAt": "2026-10-25T09:38:18.748Z"
+  }
+]
