@@ -43,3 +43,19 @@ model Loan {
   @@index([borrower])
   @@index([vaultAddress])
 }
+
+// Tracks which loan services (LendingVaults) a wallet has joined as a borrower.
+// A membership is recorded on the borrower's first collateral deposit / borrow
+// against a service (or an explicit "Join New Vault"), so the service reappears
+// in the borrower's main widget on every subsequent login.
+model ServiceMembership {
+  id           String   @id @default(uuid())
+  account      String
+  vaultAddress String
+  role         String   @default("BORROWER")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([account, vaultAddress])
+  @@index([account])
+}

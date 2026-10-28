@@ -48,3 +48,4 @@ Followed by the standardized COSS sections:
 | Specification | Status | Category | Description |
 | :--- | :--- | :--- | :--- |
 | **[`AMLP-01: AI-Managed Lending Platform`](ai-managed-lending.md)** | `draft` | Component Specification | Protocol component specification for the XRPL EVM lending pool with bounded AI risk coordination, multi-collateral custody, and native XRPL bridging. |
+| **[`AMLP-UI-01: UI Component Architecture`](ui-component-spec.md)** | `draft` | Standards Track | Comprehensive UI component hierarchy, dual-view mental model (Lender vs Borrower), all 12 modals, and modularization specification. |

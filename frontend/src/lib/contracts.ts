@@ -77,5 +77,9 @@ export const TOKEN_VERIFICATION_GATE_ABI = [
   "function setTokenCompliance(address token, bool isAllowed, string riskTier, uint256 maxCollateralCap)",
 ];
 
+export const PRICE_ORACLE_ADAPTER_ABI = [
+  "function getAssetPrice(address asset) view returns (uint256, uint8)",
+];
+
 export { LENDING_VAULT_DEPLOYER_ABI, LENDING_VAULT_DEPLOYER_BYTECODE } from "./deployer-artifact";
 

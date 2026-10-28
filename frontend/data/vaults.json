@@ -1,18 +1,50 @@
 [
   {
-    "id": "vault-canonical-1",
+    "id": "95f27a48-e70e-49a7-963e-44443a5316bb",
     "name": "AI-Managed RLUSD Vault",
     "symbol": "amRLUSD",
-    "address": "0x610178dA211FEF7D417bC0e6FeD39F05609AD788",
-    "reserveVault": "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9",
-    "riskEngine": "0x8A791620dd6260079BF849Dc5567aDC3F2FdC318",
-    "liquidationManager": "0xB7f8BC63BbcaD18155201308C8f3540b07f84F5e",
+    "address": "0xd7Ec6E751f00A6c634A921C96c66Af72D5e80DCA",
+    "reserveVault": "0xee9B4DdE1873411395d4Adf17ED938dB6482e9D7",
+    "riskEngine": "0x32e23AFe62fFe414999E2B985d6aE56E8c2D0b05",
+    "liquidationManager": "0x356B915950954c68EaE79080a71A0D831875EbF7",
     "owner": "0xb1041133942d2E95e81B69acA3e7252C40d784B2",
     "asset": "0x27b57a9D0b8d24EB97259c4E2279e45255e016f3",
     "assetSymbol": "RLUSD",
-    "initialDeposit": "10000",
+    "initialDeposit": "3",
     "network": "XRPL EVM Sidechain Testnet",
-    "createdAt": "2026-10-25T09:38:18.747Z",
-    "updatedAt": "2026-10-25T09:38:18.748Z"
+    "createdAt": "2026-10-25T11:54:39.264Z",
+    "updatedAt": "2026-10-25T11:54:39.264Z"
+  },
+  {
+    "id": "0d3761d1-cbee-4de9-91ef-e03eb7868e9c",
+    "name": "AI-Managed RLUSD Vault",
+    "symbol": "amRLUSD",
+    "address": "0x0D135205dCb622A2A9a99C99ac507C7a86A19C34",
+    "reserveVault": "0xf3F7F158672b0eE9f4285816161e7A5BfDc879e2",
+    "riskEngine": "0x8c5C736AAFb67Dcb83e56AFf82CdF59d0a4F079f",
+    "liquidationManager": "0x99B6cA02d47850FB939EC0738cd1d7C319CaEE31",
+    "owner": "0xb1041133942d2E95e81B69acA3e7252C40d784B2",
+    "asset": "0x27b57a9D0b8d24EB97259c4E2279e45255e016f3",
+    "assetSymbol": "RLUSD",
+    "initialDeposit": "2",
+    "network": "XRPL EVM Sidechain Testnet",
+    "createdAt": "2026-10-25T11:41:20.899Z",
+    "updatedAt": "2026-10-25T11:41:20.899Z"
+  },
+  {
+    "id": "2b79aaf0-cb78-479f-985f-a947b7b963a6",
+    "name": "My vault on",
+    "symbol": "myRLUSD",
+    "address": "0xe540590fbD51b7D944bfF68d153Dd49E679305B3",
+    "reserveVault": "0xEf559c1e28b9B0cD8867A7A6F7A33e8C954d596e",
+    "riskEngine": "0x1d10E5cebef32eF1d5a1E1E0ceA84BF7EfE529db",
+    "liquidationManager": "0x21e3be0fe010aa29d28Bef9dC8c2E9043435D0cA",
+    "owner": "0xb1041133942d2E95e81B69acA3e7252C40d784B2",
+    "asset": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+    "assetSymbol": "RLUSD",
+    "initialDeposit": "1",
+    "network": "XRPL EVM Sidechain Testnet",
+    "createdAt": "2026-10-25T08:38:38.646Z",
+    "updatedAt": "2026-10-25T08:38:38.646Z"
   }
 ]

@@ -28,10 +28,33 @@ function writeLocalLoans(loans: any[]) {
   }
 }
 
+/** Aggregate ACTIVE loans per vault (keys are lowercased vault addresses). */
+function groupLoansByVault(loans: any[]) {
+  const groups: Record<string, { activeLoans: number; totalActiveDebt: number; totalLoans: number }> = {};
+  for (const l of loans) {
+    if (!l.vaultAddress) continue;
+    const key = String(l.vaultAddress).toLowerCase();
+    if (!groups[key]) groups[key] = { activeLoans: 0, totalActiveDebt: 0, totalLoans: 0 };
+    groups[key].totalLoans += 1;
+    if (l.status === "ACTIVE") {
+      groups[key].activeLoans += 1;
+      groups[key].totalActiveDebt += parseFloat(l.amountRLUSD || "0") || 0;
+    }
+  }
+  return groups;
+}
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const borrower = searchParams.get("borrower");
   const vaultAddress = searchParams.get("vaultAddress");
+  // Optional: ?groupBy=vault returns per-vault aggregates instead of raw loans
+  const groupBy = searchParams.get("groupBy");
+
+  const respond = (loans: any[]) =>
+    groupBy === "vault"
+      ? NextResponse.json({ success: true, groups: groupLoansByVault(loans) })
+      : NextResponse.json({ success: true, loans });
 
   try {
     const where: any = {};
@@ -47,7 +70,7 @@ export async function GET(request: Request) {
       orderBy: { createdAt: "desc" },
     });
     if (loans) {
-      return NextResponse.json({ success: true, loans });
+      return respond(loans);
     }
   } catch (err: any) {
     console.warn("Prisma loan query error, using local fallback:", err.message);
@@ -61,7 +84,7 @@ export async function GET(request: Request) {
     if (vaultAddress && l.vaultAddress.toLowerCase() !== vaultAddress.toLowerCase()) match = false;
     return match;
   });
-  return NextResponse.json({ success: true, loans: filtered });
+  return respond(filtered);
 }
 
 export async function POST(request: Request) {

@@ -28,14 +28,20 @@ function writeLocalVaults(vaults: any[]) {
   }
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  // Optional: only return loan services operated (deployed) by this address
+  const owner = searchParams.get("owner");
+  const matchesOwner = (v: any) =>
+    !owner || (v.owner && v.owner.toLowerCase() === owner.toLowerCase());
+
   try {
     const vaults = await prisma.vault.findMany({
       orderBy: { createdAt: "desc" },
     });
     if (vaults && vaults.length > 0) {
       writeLocalVaults(vaults);
-      return NextResponse.json({ success: true, vaults });
+      return NextResponse.json({ success: true, vaults: vaults.filter(matchesOwner) });
     }
   } catch (err: any) {
     console.warn("Prisma vault query error, using local file fallback:", err.message);
@@ -43,7 +49,7 @@ export async function GET() {
 
   // Fallback to persistent local data/vaults.json
   const localVaults = readLocalVaults();
-  return NextResponse.json({ success: true, vaults: localVaults });
+  return NextResponse.json({ success: true, vaults: localVaults.filter(matchesOwner) });
 }
 
 export async function POST(request: Request) {
