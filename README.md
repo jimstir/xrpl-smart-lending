@@ -1,6 +1,8 @@
 # XRPL Smart Lending: AI-Managed Lending Platform
 
-Autonomous, non-custodial multi-collateral lending protocol on the **XRP Ledger (XRPL) EVM Sidechain** with bounded AI risk coordination, automated liquidations, and recovery reconciliation.
+Autonomous, AI-managed loan services for private lenders on the XRP Ledger (XRPL) EVM Sidechain.
+
+Deploy, fund, and operate custom RLUSD lending vaults managed 24/7 by dedicated AI solvency agents. Private lenders maintain sovereign on-chain custody while autonomous agents optimize dynamic interest rate curves, evaluate borrower health factors, and protect pool solvency in real time.
 
 ---
 

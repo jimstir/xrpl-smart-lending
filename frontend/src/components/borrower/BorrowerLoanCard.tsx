@@ -20,6 +20,20 @@ export function BorrowerLoanCard({ loan, currentHealthFactor }: BorrowerLoanCard
 
   const isActive = loan.status === "ACTIVE";
 
+  const unitPrice =
+    loan.collateralToken?.toUpperCase().includes("ETH")
+      ? 3000
+      : loan.collateralToken?.toUpperCase().includes("XRP")
+      ? 0.60
+      : 1.0;
+  const colAmountNum = parseFloat(loan.collateralAmount || "0");
+  const estimatedUSD = (colAmountNum * unitPrice).toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+
+  const effectiveHf = (loan as any).healthFactor || currentHealthFactor || "1.50";
+
   return (
     <div
       onClick={handleCardClick}
@@ -46,7 +60,7 @@ export function BorrowerLoanCard({ loan, currentHealthFactor }: BorrowerLoanCard
         </div>
 
         {isActive ? (
-          <HealthFactorBadge healthFactor={currentHealthFactor || "1.50"} />
+          <HealthFactorBadge healthFactor={effectiveHf} />
         ) : (
           <span className="px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700 text-xs font-semibold">
             {loan.status}
@@ -66,7 +80,8 @@ export function BorrowerLoanCard({ loan, currentHealthFactor }: BorrowerLoanCard
         <div className="flex items-center justify-between">
           <span className="text-xs text-slate-400">Pledged Collateral:</span>
           <span className="font-mono font-bold text-xs text-slate-200">
-            {loan.collateralAmount} {loan.collateralToken}
+            {loan.collateralAmount} {loan.collateralToken}{" "}
+            <span className="text-slate-400 font-normal">(${estimatedUSD} USD)</span>
           </span>
         </div>
 

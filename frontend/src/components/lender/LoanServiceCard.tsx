@@ -1,9 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Building2, ArrowUpRight, Copy, Check, Bot } from "lucide-react";
+import { ethers } from "ethers";
 import { VaultData } from "../../hooks/useVaultList";
 import { useModal } from "../../context/ModalContext";
+import { useWeb3 } from "../../context/Web3Context";
+import { LENDING_VAULT_ABI } from "../../lib/contracts";
 
 interface LoanServiceCardProps {
   vault: VaultData;
@@ -12,7 +15,33 @@ interface LoanServiceCardProps {
 
 export function LoanServiceCard({ vault, onRefresh }: LoanServiceCardProps) {
   const { openModal } = useModal();
+  const { getProviderAndSigner } = useWeb3();
   const [copied, setCopied] = useState(false);
+  const [liveLiquidity, setLiveLiquidity] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    async function fetchLiveLiquidity() {
+      if (!vault?.address || !ethers.isAddress(vault.address)) return;
+      try {
+        const { provider } = await getProviderAndSigner();
+        const code = await provider.getCode(vault.address);
+        if (code && code !== "0x") {
+          const contract = new ethers.Contract(vault.address, LENDING_VAULT_ABI, provider);
+          const assets = await contract.totalAssets();
+          if (isMounted) {
+            setLiveLiquidity(ethers.formatEther(assets));
+          }
+        }
+      } catch (err) {
+        // Fallback to vault.initialDeposit if contract call fails
+      }
+    }
+    fetchLiveLiquidity();
+    return () => {
+      isMounted = false;
+    };
+  }, [vault?.address, getProviderAndSigner]);
 
   const handleCardClick = () => {
     openModal("MANAGE_LOAN_SERVICE", { vault, onRefresh });
@@ -67,7 +96,11 @@ export function LoanServiceCard({ vault, onRefresh }: LoanServiceCardProps) {
         <div className="flex items-center justify-between">
           <span className="text-slate-400">Pool Liquidity:</span>
           <span className="font-mono font-bold text-emerald-400">
-            ${parseFloat(vault.initialDeposit || "0").toLocaleString()} RLUSD
+            $
+            {parseFloat(
+              liveLiquidity !== null ? liveLiquidity : vault.initialDeposit || "0"
+            ).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}{" "}
+            RLUSD
           </span>
         </div>
 

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   X,
   Bot,
@@ -12,6 +12,8 @@ import {
   Settings,
   Users,
   Power,
+  AlertCircle,
+  Clock,
 } from "lucide-react";
 import { ethers } from "ethers";
 import { useModal } from "../../context/ModalContext";
@@ -22,24 +24,65 @@ import {
   MOCK_ERC20_ABI,
 } from "../../lib/contracts";
 
-interface DepositorRecord {
+export interface InteractingAddressRecord {
+  id: string;
   address: string;
-  assets: string;
-  shares: string;
+  type: "BORROWER" | "DEPOSITOR" | "DEPLOYER";
+  deposited: string;
+  lentOut?: string;
+  timeFormatted: string;
+  timeElapsed: string;
+  timestamp: number;
+  txHash?: string;
+}
+
+function formatInteractionTime(isoOrTimestamp?: string | number) {
+  if (!isoOrTimestamp) return { formatted: "Unknown", elapsed: "Recent", timestamp: 0 };
+  const date = new Date(isoOrTimestamp);
+  const time = date.getTime();
+  if (isNaN(time)) return { formatted: String(isoOrTimestamp), elapsed: "Recent", timestamp: 0 };
+
+  const now = Date.now();
+  const diffSec = Math.max(0, Math.floor((now - time) / 1000));
+  let elapsed = "just now";
+  if (diffSec >= 86400) {
+    const days = Math.floor(diffSec / 86400);
+    elapsed = `${days}d ago`;
+  } else if (diffSec >= 3600) {
+    const hours = Math.floor(diffSec / 3600);
+    elapsed = `${hours}h ago`;
+  } else if (diffSec >= 60) {
+    const mins = Math.floor(diffSec / 60);
+    elapsed = `${mins}m ago`;
+  } else if (diffSec > 0) {
+    elapsed = `${diffSec}s ago`;
+  }
+
+  const formatted = date.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  return { formatted, elapsed, timestamp: time };
 }
 
 export function ManageLoanServiceModal() {
   const { activeModal, closeModal, modalPayload } = useModal();
-  const { getProviderAndSigner, showMessage } = useWeb3();
+  const { getProviderAndSigner, showMessage, refreshBalances } = useWeb3();
 
   const [copiedKey, setCopiedKey] = useState<string>("");
   const [supplyAmount, setSupplyAmount] = useState<string>("");
+  const [supplyError, setSupplyError] = useState<string | null>(null);
   const [utilizationRate, setUtilizationRate] = useState<string>("0.0");
   const [borrowRate, setBorrowRate] = useState<string>("0.0");
   const [totalPoolAssets, setTotalPoolAssets] = useState<string>("0.0");
   const [userRlusdBalance, setUserRlusdBalance] = useState<string>("0.0");
   const [proposals, setProposals] = useState<any[]>([]);
-  const [depositors, setDepositors] = useState<DepositorRecord[]>([]);
+  const [interactingAddresses, setInteractingAddresses] = useState<InteractingAddressRecord[]>([]);
+  const [addressFilter, setAddressFilter] = useState<"ALL" | "BORROWER" | "DEPOSITOR">("ALL");
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isExecuting, setIsExecuting] = useState<string | null>(null);
 
@@ -103,39 +146,80 @@ export function ManageLoanServiceModal() {
         setUserRlusdBalance(parseFloat(ethers.formatEther(bal)).toFixed(2));
       } catch {}
 
-      // 3. Query on-chain depositors or fallback to owner seed deposit
+      // 3. Query all interacting addresses (borrowers & capital depositors)
+      const loanRecords: InteractingAddressRecord[] = [];
+      try {
+        const res = await fetch(`/api/loans?vaultAddress=${vault.address}`);
+        const data = await res.json();
+        if (data.success && Array.isArray(data.loans)) {
+          for (const l of data.loans) {
+            const timeInfo = formatInteractionTime(l.createdAt || l.updatedAt);
+            loanRecords.push({
+              id: l.id || `loan-${l.txHash || Math.random()}`,
+              address: l.borrower,
+              type: "BORROWER",
+              deposited: `${l.collateralAmount} ${l.collateralToken}`,
+              lentOut: `${parseFloat(l.amountRLUSD || "0").toFixed(2)} RLUSD`,
+              timeFormatted: timeInfo.formatted,
+              timeElapsed: timeInfo.elapsed,
+              timestamp: timeInfo.timestamp,
+              txHash: l.txHash,
+            });
+          }
+        }
+      } catch (loanErr) {
+        console.warn("Could not load loans for vault:", loanErr);
+      }
+
+      const depositorRecords: InteractingAddressRecord[] = [];
       try {
         const filter = vaultContract.filters.Deposit ? vaultContract.filters.Deposit() : "Deposit";
         const events = await vaultContract.queryFilter(filter, -2000).catch(() => []);
         if (events && events.length > 0) {
-          const depositorMap: Record<string, { address: string; assets: bigint; shares: bigint }> = {};
           for (const ev of events) {
             const args = (ev as any).args;
             if (args) {
               const ownerAddr = args.owner || args[1];
               const assets = args.assets || args[2] || BigInt(0);
-              const shares = args.shares || args[3] || BigInt(0);
-              const key = ownerAddr.toLowerCase();
-              if (!depositorMap[key]) {
-                depositorMap[key] = { address: ownerAddr, assets: BigInt(0), shares: BigInt(0) };
-              }
-              depositorMap[key].assets += BigInt(assets);
-              depositorMap[key].shares += BigInt(shares);
+              const txHash = ev.transactionHash;
+              const timeInfo = formatInteractionTime(Date.now() - 3600000);
+              depositorRecords.push({
+                id: `dep-${txHash || Math.random()}-${ownerAddr}`,
+                address: ownerAddr,
+                type: "DEPOSITOR",
+                deposited: `$${parseFloat(ethers.formatEther(assets)).toFixed(2)} RLUSD`,
+                timeFormatted: timeInfo.formatted,
+                timeElapsed: timeInfo.elapsed,
+                timestamp: timeInfo.timestamp,
+                txHash,
+              });
             }
           }
-          setDepositors(
-            Object.values(depositorMap).map((d) => ({
-              address: d.address,
-              assets: parseFloat(ethers.formatEther(d.assets)).toFixed(2),
-              shares: parseFloat(ethers.formatEther(d.shares)).toFixed(2),
-            }))
-          );
-        } else {
-          setDepositors([]);
         }
-      } catch {
-        setDepositors([]);
+      } catch (evErr) {
+        console.warn("Error querying deposit events:", evErr);
       }
+
+      // If no on-chain event logs found and vault has owner, include deployer seed record
+      if (depositorRecords.length === 0 && vault.owner) {
+        const timeInfo = formatInteractionTime(vault.createdAt || Date.now());
+        const initDep = parseFloat(vault.initialDeposit || "0");
+        depositorRecords.push({
+          id: `dep-owner-${vault.address}`,
+          address: vault.owner,
+          type: "DEPLOYER",
+          deposited: `$${initDep.toFixed(2)} RLUSD`,
+          timeFormatted: timeInfo.formatted,
+          timeElapsed: timeInfo.elapsed,
+          timestamp: timeInfo.timestamp,
+          txHash: undefined,
+        });
+      }
+
+      const allInteractions = [...loanRecords, ...depositorRecords].sort(
+        (a, b) => b.timestamp - a.timestamp
+      );
+      setInteractingAddresses(allInteractions);
 
       // No fake/mock proposals - real telemetry reports optimal status unless actual on-chain proposal exists
       setProposals([]);
@@ -161,11 +245,40 @@ export function ManageLoanServiceModal() {
     setTimeout(() => setCopiedKey(""), 2000);
   };
 
+  const borrowerCount = useMemo(
+    () => interactingAddresses.filter((a) => a.type === "BORROWER").length,
+    [interactingAddresses]
+  );
+  const depositorCount = useMemo(
+    () => interactingAddresses.filter((a) => a.type !== "BORROWER").length,
+    [interactingAddresses]
+  );
+
+  const filteredInteractions = useMemo(() => {
+    if (addressFilter === "BORROWER") {
+      return interactingAddresses.filter((a) => a.type === "BORROWER");
+    }
+    if (addressFilter === "DEPOSITOR") {
+      return interactingAddresses.filter((a) => a.type !== "BORROWER");
+    }
+    return interactingAddresses;
+  }, [interactingAddresses, addressFilter]);
+
   const handleSupplyLiquidity = async () => {
-    if (!supplyAmount || parseFloat(supplyAmount) <= 0) {
-      showMessage("Please enter a valid supply amount.", "error");
+    setSupplyError(null);
+    const sNum = parseFloat(supplyAmount);
+    const wNum = parseFloat(userRlusdBalance || "0");
+
+    if (!supplyAmount || isNaN(sNum) || sNum <= 0) {
+      setSupplyError("Please enter a valid supply amount.");
       return;
     }
+
+    if (sNum > wNum) {
+      setSupplyError(`Insufficient RLUSD balance: Your wallet only holds $${userRlusdBalance} RLUSD. Enter an amount up to your available balance.`);
+      return;
+    }
+
     setIsLoading(true);
     try {
       const { signer } = await getProviderAndSigner();
@@ -176,19 +289,28 @@ export function ManageLoanServiceModal() {
       const vaultContract = new ethers.Contract(vault.address, LENDING_VAULT_ABI, signer);
 
       const amountWei = ethers.parseEther(supplyAmount);
-      try {
-        await (await rlusd.mint(userAddr, amountWei)).wait();
-      } catch {}
+      const currentBal = await rlusd.balanceOf(userAddr).catch(() => BigInt(0));
+      if (currentBal < amountWei) {
+        throw new Error(`Insufficient RLUSD tokens in connected wallet (${parseFloat(ethers.formatEther(currentBal)).toFixed(2)} available).`);
+      }
 
-      await (await rlusd.approve(vault.address, amountWei)).wait();
+      const approveTx = await rlusd.approve(vault.address, amountWei);
+      await approveTx.wait();
+
       const tx = await vaultContract.deposit(amountWei, userAddr);
       await tx.wait();
 
       showMessage(`Supplied ${supplyAmount} RLUSD into ${vault.name}!`, "success");
       setSupplyAmount("");
-      fetchVaultMetrics();
+      await fetchVaultMetrics();
+      await refreshBalances();
       if (modalPayload?.onRefresh) modalPayload.onRefresh();
     } catch (err: any) {
+      if (err?.code === "ACTION_REJECTED" || err?.message?.includes("user rejected")) {
+        setSupplyError("Supply transaction was cancelled in MetaMask.");
+      } else {
+        setSupplyError(`Deposit Failed: ${err.reason || err.message || "Execution reverted"}`);
+      }
       showMessage(`Deposit Failed: ${err.message}`, "error");
     } finally {
       setIsLoading(false);
@@ -387,36 +509,172 @@ export function ManageLoanServiceModal() {
                   <span>Supply Capital</span>
                 </button>
               </div>
+
+              {/* Inline Supply Error Banner */}
+              {supplyError && (
+                <div className="p-3 rounded-xl bg-red-950/40 border border-red-500/40 text-red-300 text-xs flex items-start space-x-2 animate-in fade-in">
+                  <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                  <span className="text-[11px] leading-relaxed">{supplyError}</span>
+                </div>
+              )}
             </div>
 
-            {/* Depositors Table */}
-            <div className="space-y-1.5 pt-1">
-              <span className="text-[11px] font-semibold text-slate-400 block">
-                Addresses Deposited into this Vault ({depositors.length}):
-              </span>
-              <div className="max-h-36 overflow-y-auto space-y-1.5">
-                {depositors.length === 0 ? (
-                  <p className="text-xs text-slate-500 italic py-2">No external depositors recorded yet.</p>
+            {/* Interacting Addresses Minimal List */}
+            <div className="space-y-2 pt-2 border-t border-slate-800/80">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div className="flex items-center space-x-2">
+                  <Users className="w-3.5 h-3.5 text-cyan-400" />
+                  <span className="text-[11px] font-bold text-white uppercase tracking-wider">
+                    Interacting Addresses ({filteredInteractions.length})
+                  </span>
+                </div>
+
+                {/* Filter Pills */}
+                <div className="flex items-center space-x-1.5 text-[10px] font-semibold">
+                  <button
+                    type="button"
+                    onClick={() => setAddressFilter("ALL")}
+                    className={`px-2 py-0.5 rounded-lg transition ${
+                      addressFilter === "ALL"
+                        ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40"
+                        : "bg-slate-900 text-slate-400 hover:text-white border border-slate-800"
+                    }`}
+                  >
+                    All ({interactingAddresses.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAddressFilter("BORROWER")}
+                    className={`px-2 py-0.5 rounded-lg transition ${
+                      addressFilter === "BORROWER"
+                        ? "bg-purple-500/20 text-purple-300 border border-purple-500/40"
+                        : "bg-slate-900 text-slate-400 hover:text-white border border-slate-800"
+                    }`}
+                  >
+                    Borrowers ({borrowerCount})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAddressFilter("DEPOSITOR")}
+                    className={`px-2 py-0.5 rounded-lg transition ${
+                      addressFilter === "DEPOSITOR"
+                        ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
+                        : "bg-slate-900 text-slate-400 hover:text-white border border-slate-800"
+                    }`}
+                  >
+                    Depositors ({depositorCount})
+                  </button>
+                </div>
+              </div>
+
+              {/* Minimal List Container */}
+              <div className="max-h-48 overflow-y-auto space-y-1.5 pr-0.5">
+                {filteredInteractions.length === 0 ? (
+                  <p className="text-xs text-slate-500 italic py-3 text-center bg-slate-900/50 rounded-lg border border-slate-800/60">
+                    No interacting addresses recorded for this service.
+                  </p>
                 ) : (
-                  depositors.map((d, idx) => (
+                  filteredInteractions.map((rec) => (
                     <div
-                      key={idx}
-                      className="p-2.5 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-between text-xs font-mono"
+                      key={rec.id}
+                      className="p-2.5 rounded-lg bg-slate-900 border border-slate-800 hover:border-slate-700 transition flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs font-mono"
                     >
-                      <div className="flex items-center space-x-2 truncate">
-                        <span className="w-1.5 h-1.5 rounded-full bg-cyan-400"></span>
-                        <span className="text-white truncate">
-                          {d.address.slice(0, 8)}...{d.address.slice(-6)}
+                      {/* Left: Address + Role Pill */}
+                      <div className="flex items-center space-x-2 min-w-0">
+                        <span
+                          className={`px-1.5 py-0.5 rounded text-[9px] font-bold font-sans uppercase shrink-0 ${
+                            rec.type === "BORROWER"
+                              ? "bg-purple-950 text-purple-300 border border-purple-800"
+                              : rec.type === "DEPLOYER"
+                              ? "bg-cyan-950 text-cyan-300 border border-cyan-800"
+                              : "bg-emerald-950 text-emerald-300 border border-emerald-800"
+                          }`}
+                        >
+                          {rec.type === "BORROWER"
+                            ? "Borrower"
+                            : rec.type === "DEPLOYER"
+                            ? "Deployer"
+                            : "Depositor"}
                         </span>
-                        {vault.owner && d.address.toLowerCase() === vault.owner.toLowerCase() && (
-                          <span className="text-[9px] px-1.5 py-0.2 rounded bg-cyan-950 text-cyan-300 border border-cyan-800 font-sans">
-                            Deployer
-                          </span>
-                        )}
+                        <span className="text-white truncate font-medium" title={rec.address}>
+                          {rec.address.slice(0, 6)}...{rec.address.slice(-4)}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => copyToClipboard(rec.address, rec.id)}
+                          className="p-0.5 text-slate-500 hover:text-white rounded transition"
+                          title="Copy Address"
+                        >
+                          {copiedKey === rec.id ? (
+                            <Check className="w-3 h-3 text-emerald-400" />
+                          ) : (
+                            <Copy className="w-3 h-3" />
+                          )}
+                        </button>
+                        <a
+                          href={`https://explorer.testnet.xrplevm.org/address/${rec.address}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="p-0.5 text-slate-500 hover:text-cyan-400 rounded transition"
+                          title="View Address on Explorer"
+                        >
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
                       </div>
-                      <div className="text-right shrink-0">
-                        <span className="text-emerald-400 font-bold block">${d.assets} RLUSD</span>
-                        <span className="text-[10px] text-slate-500 block">{d.shares} amRLUSD shares</span>
+
+                      {/* Right: Deposited, Time, Tx Hash */}
+                      <div className="flex flex-wrap items-center gap-3 text-[11px] sm:justify-end shrink-0">
+                        {/* Deposited */}
+                        <div className="text-slate-300">
+                          <span className="text-slate-500 text-[10px] mr-1">Deposited:</span>
+                          <span className="text-amber-300 font-bold">{rec.deposited}</span>
+                          {rec.lentOut && (
+                            <span className="text-slate-400 text-[10px] ml-1">
+                              (Lent: <span className="text-cyan-300 font-semibold">{rec.lentOut}</span>)
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Time */}
+                        <div
+                          className="flex items-center space-x-1 text-slate-400"
+                          title={rec.timeFormatted}
+                        >
+                          <Clock className="w-3 h-3 text-slate-500 shrink-0" />
+                          <span>{rec.timeElapsed}</span>
+                        </div>
+
+                        {/* Tx Hash */}
+                        {rec.txHash ? (
+                          <div className="flex items-center space-x-1">
+                            <a
+                              href={`https://explorer.testnet.xrplevm.org/tx/${rec.txHash}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="px-2 py-0.5 rounded bg-slate-950 border border-slate-800 text-cyan-400 hover:text-cyan-300 hover:border-cyan-500/50 transition flex items-center space-x-1"
+                              title={rec.txHash}
+                            >
+                              <span>
+                                Tx: {rec.txHash.slice(0, 6)}...{rec.txHash.slice(-4)}
+                              </span>
+                              <ExternalLink className="w-2.5 h-2.5" />
+                            </a>
+                            <button
+                              type="button"
+                              onClick={() => copyToClipboard(rec.txHash!, `tx-${rec.id}`)}
+                              className="p-0.5 text-slate-500 hover:text-white rounded transition"
+                              title="Copy Tx Hash"
+                            >
+                              {copiedKey === `tx-${rec.id}` ? (
+                                <Check className="w-3 h-3 text-emerald-400" />
+                              ) : (
+                                <Copy className="w-3 h-3" />
+                              )}
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="text-slate-600 text-[10px] italic">Genesis / Seed</span>
+                        )}
                       </div>
                     </div>
                   ))

@@ -12,6 +12,7 @@ export type ModalType =
   | "DEPLOY_VAULT"
   | "JOIN_VAULT"
   | "FIAT_ONRAMP"
+  | "NATIVE_XRPL_ESCROW"
   | null;
 
 interface ModalContextType {

@@ -1,8 +1,8 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
 import { ethers } from "ethers";
-import { DEPLOYED_ADDRESSES } from "../lib/contracts";
+import { DEPLOYED_ADDRESSES, MOCK_ERC20_ABI } from "../lib/contracts";
 import { createAndFundXRPLTestnetWallet, XRPLTestnetWallet } from "../lib/xrpl-wallet";
 
 interface Web3ContextType {
@@ -12,6 +12,10 @@ interface Web3ContextType {
   isFundingXRPL: boolean;
   actorRole: "LENDER" | "BORROWER";
   statusMessage: { text: string; type: "success" | "error" | "info" } | null;
+  evmXrpBalance: string;
+  evmRlusdBalance: string;
+  isRefreshingBalances: boolean;
+  refreshBalances: () => Promise<void>;
   connectMetaMask: () => Promise<void>;
   disconnectWallet: () => void;
   fundXRPLWallet: () => Promise<void>;
@@ -29,6 +33,10 @@ export function Web3Provider({ children }: { children: ReactNode }) {
   const [isFundingXRPL, setIsFundingXRPL] = useState<boolean>(false);
   const [actorRole, setActorRole] = useState<"LENDER" | "BORROWER">("LENDER");
   const [statusMessage, setStatusMessage] = useState<{ text: string; type: "success" | "error" | "info" } | null>(null);
+
+  const [evmXrpBalance, setEvmXrpBalance] = useState<string>("0.00");
+  const [evmRlusdBalance, setEvmRlusdBalance] = useState<string>("0.00");
+  const [isRefreshingBalances, setIsRefreshingBalances] = useState<boolean>(false);
 
   const showMessage = (text: string, type: "success" | "error" | "info") => {
     setStatusMessage({ text, type });
@@ -105,9 +113,61 @@ export function Web3Provider({ children }: { children: ReactNode }) {
     }
   };
 
+  const refreshBalances = useCallback(async () => {
+    if (!evmAccount || typeof window === "undefined" || !(window as any).ethereum) {
+      setEvmXrpBalance("0.00");
+      setEvmRlusdBalance("0.00");
+      return;
+    }
+    setIsRefreshingBalances(true);
+    try {
+      const browserProvider = new ethers.BrowserProvider((window as any).ethereum);
+
+      // 1. Native XRP balance (gas currency on XRPL EVM Sidechain)
+      const xrpWei = await browserProvider.getBalance(evmAccount).catch(() => BigInt(0));
+      const xrpNum = parseFloat(ethers.formatEther(xrpWei));
+      setEvmXrpBalance(
+        xrpNum.toLocaleString(undefined, {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 4,
+        })
+      );
+
+      // 2. RLUSD ERC-20 balance
+      const rlusdContract = new ethers.Contract(
+        DEPLOYED_ADDRESSES.contracts.RLUSD,
+        MOCK_ERC20_ABI,
+        browserProvider
+      );
+      const rlusdWei = await rlusdContract.balanceOf(evmAccount).catch(() => BigInt(0));
+      const rlusdNum = parseFloat(ethers.formatEther(rlusdWei));
+      setEvmRlusdBalance(
+        rlusdNum.toLocaleString(undefined, {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        })
+      );
+    } catch (err) {
+      console.warn("Could not query wallet balances:", err);
+    } finally {
+      setIsRefreshingBalances(false);
+    }
+  }, [evmAccount]);
+
+  useEffect(() => {
+    if (evmAccount) {
+      refreshBalances();
+    } else {
+      setEvmXrpBalance("0.00");
+      setEvmRlusdBalance("0.00");
+    }
+  }, [evmAccount, refreshBalances]);
+
   const disconnectWallet = () => {
     setEvmAccount("");
     setIsMetaMaskConnected(false);
+    setEvmXrpBalance("0.00");
+    setEvmRlusdBalance("0.00");
     if (typeof window !== "undefined") {
       localStorage.removeItem("amlp_wallet_type");
     }
@@ -180,6 +240,10 @@ export function Web3Provider({ children }: { children: ReactNode }) {
         isFundingXRPL,
         actorRole,
         statusMessage,
+        evmXrpBalance,
+        evmRlusdBalance,
+        isRefreshingBalances,
+        refreshBalances,
         connectMetaMask,
         disconnectWallet,
         fundXRPLWallet,

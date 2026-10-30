@@ -9,6 +9,7 @@ import { LenderDepositModal } from "../modals/LenderDepositModal";
 import { DeployVaultModal } from "../modals/DeployVaultModal";
 import { JoinVaultModal } from "../modals/JoinVaultModal";
 import { ManageLoanServiceModal } from "../modals/ManageLoanServiceModal";
+import { NativeXrplEscrowModal } from "../modals/NativeXrplEscrowModal";
 
 export function ModalHost() {
   const { activeModal } = useModal();
@@ -24,6 +25,7 @@ export function ModalHost() {
       <DeployVaultModal />
       <JoinVaultModal />
       <ManageLoanServiceModal />
+      <NativeXrplEscrowModal />
     </>
   );
 }

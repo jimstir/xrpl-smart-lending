@@ -9,7 +9,7 @@ import { DEPLOYED_ADDRESSES, LENDING_VAULT_ABI, MOCK_ERC20_ABI, FIAT_GATEWAY_ABI
 
 export function LenderDepositModal() {
   const { activeModal, closeModal, modalPayload } = useModal();
-  const { getProviderAndSigner, showMessage } = useWeb3();
+  const { getProviderAndSigner, showMessage, refreshBalances } = useWeb3();
 
   const [depositMethod, setDepositMethod] = useState<"RLUSD" | "MASTERCARD">("RLUSD");
   const [depositAmount, setDepositAmount] = useState<string>("5000");
@@ -30,19 +30,21 @@ export function LenderDepositModal() {
       const vault = new ethers.Contract(vaultAddress, LENDING_VAULT_ABI, signer);
 
       const amountWei = ethers.parseEther(depositAmount);
-      try {
-        await (await rlusd.mint(userAddr, amountWei)).wait();
-      } catch {}
+      const currentBal = await rlusd.balanceOf(userAddr).catch(() => BigInt(0));
+      if (currentBal < amountWei) {
+        throw new Error(`Insufficient RLUSD tokens in wallet (${parseFloat(ethers.formatEther(currentBal)).toFixed(2)} available).`);
+      }
 
       await (await rlusd.approve(vaultAddress, amountWei)).wait();
       const depTx = await vault.deposit(amountWei, userAddr);
       await depTx.wait();
 
       showMessage(`Deposited ${depositAmount} RLUSD into vault! Minted amRLUSD shares to your wallet.`, "success");
+      await refreshBalances();
       closeModal();
       if (modalPayload?.onRefresh) modalPayload.onRefresh();
     } catch (err: any) {
-      showMessage(`Deposit Failed: ${err.message}`, "error");
+      showMessage(`Deposit Failed: ${err.reason || err.message || "Transaction reverted"}`, "error");
     } finally {
       setIsLoading(false);
     }

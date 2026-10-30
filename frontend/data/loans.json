@@ -1,1 +1,14 @@
-[]
+[
+  {
+    "id": "loan-mvuy32ax",
+    "borrower": "0xb1041133942d2E95e81B69acA3e7252C40d784B2",
+    "vaultAddress": "0xB270e9A232d79b2478bE64B55f6ceB5451a43a9b",
+    "amountRLUSD": "1.5",
+    "collateralToken": "wXRP",
+    "collateralAmount": "4.5",
+    "txHash": "0xcb6913e84ceadf5ebe5a3b49a5c69f29804e0c0747889a5e12b30e9b472c288c",
+    "status": "ACTIVE",
+    "createdAt": "2026-10-30T12:24:57.705Z",
+    "updatedAt": "2026-10-30T12:24:57.705Z"
+  }
+]

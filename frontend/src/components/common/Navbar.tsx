@@ -11,6 +11,8 @@ export function Navbar() {
     xrplWallet,
     isFundingXRPL,
     actorRole,
+    evmXrpBalance,
+    evmRlusdBalance,
     connectMetaMask,
     disconnectWallet,
     fundXRPLWallet,
@@ -64,16 +66,20 @@ export function Navbar() {
         {/* EVM Wallet Badge */}
         {evmAccount ? (
           <div className="flex items-center space-x-2">
-            <div className="flex items-center space-x-2 px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs font-mono">
+            <div className="flex items-center space-x-2 px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-xs font-mono">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
               <span className="text-slate-200">
                 {isMetaMaskConnected ? "MetaMask" : "EVM"}: {evmAccount.slice(0, 6)}...{evmAccount.slice(-4)}
               </span>
+              <span className="text-slate-600">|</span>
+              <span className="text-cyan-300 font-semibold">{evmXrpBalance} XRP</span>
+              <span className="text-slate-600">•</span>
+              <span className="text-emerald-400 font-semibold">{evmRlusdBalance} RLUSD</span>
             </div>
             <button
               onClick={disconnectWallet}
               title="Disconnect EVM Wallet"
-              className="px-2.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-red-400 border border-slate-800 text-xs transition font-medium"
+              className="px-2.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-red-400 border border-slate-800 text-xs transition font-medium"
             >
               Disconnect
             </button>

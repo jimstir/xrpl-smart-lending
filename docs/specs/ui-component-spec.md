@@ -160,3 +160,18 @@ frontend/src/
     ├── useVaultList.ts                  # Discovered & registered vaults
     └── useBorrowerPositions.ts          # Borrower debt, collateral, Hf
 ```
+
+---
+
+## 7. Accepted Decisions Log (Mandatory Protocol)
+
+| Date | User Clarification / Trigger | Accepted Decision & Architectural Constraint | Status | Impacted Files |
+| :--- | :--- | :--- | :--- | :--- |
+| 2026-10-30 | Lender View Scope Clarification | **Strict Ownership Filtering**: The Lender View must strictly filter to vaults owned by the connected wallet (`v.owner === evmAccount`). Do NOT display other operators' or public vaults in the Lender management dashboard. | Active | `LenderView.tsx` |
+| 2026-10-30 | Main Content Area Purity | **Main Canvas Exclusivity**: Auxiliary widgets and bridge banners (`NativeXrplEscrowWidget`) must not sit in the primary scroll body. Accessible exclusively via Header CTA (`[⚡ XRPL Escrow]`) or dedicated modal. | Active | `BorrowerView.tsx`, `BorrowerLoansGrid.tsx` |
+| 2026-10-30 | Collateral Valuation Requirement | **Dual Currency Display**: Borrower loan cards must display both raw collateral amount and estimated USD valuation (e.g. `1.85 wETH ($5,550.00 USD)`). | Active | `BorrowerLoanCard.tsx` |
+| 2026-10-30 | Dynamic Liquidity Binding | **On-Chain Pool Liquidity**: Loan service cards must dynamically fetch and display live on-chain assets (`totalAssets()`) rather than static deployment fixtures. | Active | `LoanServiceCard.tsx` |
+| 2026-10-30 | Dual-View Wallet Balance Display | **Signed-In Balance Headers**: Both Lender View and Borrower View header toolbars, as well as the global Navbar, must display the connected EVM wallet's live native XRP and RLUSD balances. | Active | `Navbar.tsx`, `LenderView.tsx`, `BorrowerLoansGrid.tsx`, `Web3Context.tsx` |
+| 2026-10-30 | Deploy Vault Transparency & Token Semantics | **Real Token Access Controls & Unfunded Vault Shells**: The app must never assume arbitrary `mint()` rights on official/testnet RLUSD. In `DeployVaultModal`, validate available balance before deposit, default to `$0.00` initial deposit, accurately record on-chain deposits in DB/localStorage, and provide live progress steps, inline error banners, and a dedicated confirmation screen with next-steps guidance. | Active | `DeployVaultModal.tsx`, `ManageLoanServiceModal.tsx` |
+
+

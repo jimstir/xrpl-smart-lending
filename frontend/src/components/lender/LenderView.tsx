@@ -21,7 +21,7 @@ export function LenderView({
   isLoading,
 }: LenderViewProps) {
   const { openModal } = useModal();
-  const { evmAccount } = useWeb3();
+  const { evmAccount, evmXrpBalance, evmRlusdBalance } = useWeb3();
   const [searchQuery, setSearchQuery] = useState("");
 
   // Strictly filter vaults deployed by this connected address
@@ -44,18 +44,30 @@ export function LenderView({
     <div className="space-y-6">
       {/* Clean Header Bar: Title, Search & Deploy New Vault Button */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
-        <div className="flex items-center space-x-3">
-          <div className="w-9 h-9 rounded-xl bg-cyan-500/10 text-cyan-400 flex items-center justify-center font-bold">
-            <Building2 className="w-5 h-5" />
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center space-x-3">
+            <div className="w-9 h-9 rounded-xl bg-cyan-500/10 text-cyan-400 flex items-center justify-center font-bold">
+              <Building2 className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-white flex items-center space-x-2">
+                <span>Loan Services</span>
+                <span className="text-xs px-2 py-0.5 rounded-full bg-slate-800 text-cyan-300 font-mono">
+                  {myDeployedVaults.length} Deployed
+                </span>
+              </h2>
+            </div>
           </div>
-          <div>
-            <h2 className="text-base font-bold text-white flex items-center space-x-2">
-              <span>Loan Services</span>
-              <span className="text-xs px-2 py-0.5 rounded-full bg-slate-800 text-cyan-300 font-mono">
-                {myDeployedVaults.length} Deployed
-              </span>
-            </h2>
-          </div>
+
+          {/* Signed-in Wallet Balance Pill */}
+          {evmAccount && (
+            <div className="flex items-center space-x-2 px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-xs font-mono">
+              <span className="text-slate-400 text-[11px] font-sans">Wallet:</span>
+              <span className="text-cyan-300 font-semibold">{evmXrpBalance} XRP</span>
+              <span className="text-slate-600">•</span>
+              <span className="text-emerald-400 font-semibold">{evmRlusdBalance} RLUSD</span>
+            </div>
+          )}
         </div>
 
         <div className="flex items-center space-x-3">
